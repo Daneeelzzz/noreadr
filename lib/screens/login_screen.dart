@@ -68,7 +68,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const Icon(Icons.book_rounded, size: 100, color: Colors.blueAccent),
                 const SizedBox(height: 16),
                 const Text(
-                  'Welcome to MAAMAA Mayaa',
+                  'Welcome to Novel Reader',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,

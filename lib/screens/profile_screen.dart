@@ -110,9 +110,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 unselectedLabelColor: Colors.grey,
                 indicatorColor: Theme.of(context).primaryColor,
                 tabs: const [
-                  Tab(text: 'Delivery'),
+                  Tab(text: 'Your Reading List'),
                   Tab(text: 'Completed'),
-                  Tab(text: 'Simpanan'),
+                  Tab(text: 'Bookmarks'),
                 ],
               ),
               Expanded(
@@ -204,7 +204,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   Widget _buildReadingList(BuildContext context) {
-    return const Center(child: Text('Delivery List'));
+    return const Center(child: Text('Reading List'));
   }
 
   Widget _buildCompletedList(BuildContext context) {
@@ -231,7 +231,13 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           itemCount: bookmarks.length,
           itemBuilder: (context, index) {
             final bookmark = bookmarks[index];
-            final novel = bookmark.expand['novel_id'] as RecordModel?;
+            dynamic novelData = bookmark.expand['novel_id'];
+            RecordModel? novel;
+            if (novelData is RecordModel) {
+              novel = novelData;
+            } else if (novelData is List && novelData.isNotEmpty) {
+              novel = novelData[0] as RecordModel?;
+            }
             if (novel == null) {
               return const SizedBox.shrink();
             }
@@ -266,7 +272,19 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 subtitle: Text(novel.data['author'] ?? 'Unknown Author'),
                 trailing: TextButton(
                   child: const Text('Add to Reading'),
-                  onPressed: () {},
+                  onPressed: () async {
+                    if (novel?.id != null) { // Menggunakan ?. untuk akses kondisional
+                      await PocketBaseService.addBookmark(novel!.id); // ! digunakan setelah pengecekan null
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Added to Reading List')),
+                      );
+                      setState(() {}); // Memicu pembaruan UI
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Failed to add: Novel ID is null')),
+                      );
+                    }
+                  },
                 ),
                 onTap: () {
                   Navigator.pushNamed(

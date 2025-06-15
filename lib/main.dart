@@ -36,11 +36,10 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-    
 
     if (PlatformDetector.isIOS()) {
       return CupertinoApp(
-        title: 'Mama Mayaa',
+        title: 'Novel Reader',
         debugShowCheckedModeBanner: false,
         theme: CupertinoThemeData(
           brightness: themeProvider.isDarkMode ? Brightness.dark : Brightness.light,
@@ -51,29 +50,30 @@ class MyApp extends StatelessWidget {
               ? CupertinoColors.black 
               : CupertinoColors.white,
         ),
-           initialRoute: '/',
-            routes: {
-              '/': (context) => const LoginScreen(),
-              '/main': (context) => const MainNavigationScreen(), // <— yang baru
-              '/Menu-detail': (context) => const NovelDetailScreen(),
-              '/Customer': (context) => const ReaderScreen(),
-            },
-          );
-        } else {
+        initialRoute: '/',
+        routes: {
+          '/': (context) => const LoginScreen(),
+          '/main': (context) => const MainNavigationScreen(),
+          '/novel-detail': (context) => const NovelDetailScreen(),
+          '/reader': (context) => const ReaderScreen(),
+        },
+      );
+    } else {
       return MaterialApp(
-        title: 'Mama Mayaa',
+        title: 'Novel Reader',
         debugShowCheckedModeBanner: false,
         theme: themeProvider.lightTheme,
         darkTheme: themeProvider.darkTheme,
         themeMode: themeProvider.themeMode,
-         initialRoute: '/',
-          routes: {
-            '/': (context) => const LoginScreen(),
-            '/register': (context) => const RegisterScreen(),
-            '/main': (context) => const MainNavigationScreen(), // <— yang baru
-            '/Menu-detail': (context) => const NovelDetailScreen(),
-            '/reader': (context) => const ReaderScreen(),
-      });
+        initialRoute: '/',
+        routes: {
+          '/': (context) => const LoginScreen(),
+          '/register': (context) => const RegisterScreen(),
+          '/main': (context) => const MainNavigationScreen(),
+          '/novel-detail': (context) => const NovelDetailScreen(),
+          '/reader': (context) => const ReaderScreen(),
+        },
+      );
     }
   }
 }
