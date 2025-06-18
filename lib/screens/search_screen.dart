@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../widgets/bottom_nav_bar.dart';
 import '../models/novel.dart';
+import '../utils/responsive_helper.dart'; // Added for responsiveness
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({Key? key}) : super(key: key);
@@ -14,6 +15,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
   bool _hasSearched = false;
+  List<Novel> _searchResults = []; // To store search results
 
   @override
   void initState() {
@@ -32,8 +34,9 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
     if (_searchController.text.isNotEmpty) {
       setState(() {
         _hasSearched = true;
+        // Simulate search results (replace with actual API call)
+        _searchResults = _generateSearchResults(_searchController.text);
       });
-      // In a real app, you would perform an actual search here
     }
   }
 
@@ -41,7 +44,54 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
     setState(() {
       _searchController.clear();
       _hasSearched = false;
+      _searchResults.clear();
     });
+  }
+
+  // Simulate search results based on query
+  List<Novel> _generateSearchResults(String query) {
+    final allNovels = [
+      Novel(
+        id: '1',
+        title: "The Dragon's Legacy",
+        author: "Sarah Johnson",
+        // FIX: Added the required 'description' parameter
+        description: "An ancient prophecy, a forgotten kingdom, and a young woman who holds the key to its survival. A thrilling fantasy adventure.",
+        rating: 4.9,
+        reviews: 2300,
+        genreIds: ["fantasy"],
+        chapters: 32,
+        coverImage: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80',
+      ),
+      Novel(
+        id: '2',
+        title: "Midnight Shadows",
+        author: "James Wilson",
+        // FIX: Added the required 'description' parameter
+        description: "In the rain-slicked streets of a city that never sleeps, a detective hunts a killer who leaves no trace but a single black feather.",
+        rating: 4.7,
+        reviews: 1800,
+        genreIds: ["mystery"],
+        chapters: 28,
+        coverImage: 'https://images.unsplash.com/photo-1448375240586-882707db888b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80',
+      ),
+      Novel(
+        id: '3',
+        title: "The Lost City",
+        author: "Emily Chen",
+        // FIX: Added the required 'description' parameter
+        description: "An ambitious archaeologist discovers a map that could lead to the legendary lost city of Zerzura, a place of untold riches and deadly secrets.",
+        rating: 4.8,
+        reviews: 2100,
+        genreIds: ["adventure"],
+        chapters: 30,
+        coverImage: 'https://images.unsplash.com/photo-1518709268805-4e9042af5929?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80',
+      ),
+    ];
+    return allNovels.where((novel) =>
+        novel.title.toLowerCase().contains(query.toLowerCase()) ||
+        novel.author.toLowerCase().contains(query.toLowerCase()) ||
+        novel.genreIds.any((id) => id.toLowerCase().contains(query.toLowerCase()))).toList();
   }
 
   @override
@@ -54,7 +104,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
         children: [
           // Search Input
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: ResponsiveHelper.getResponsivePadding(context),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
@@ -85,9 +135,19 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
           ),
         ],
       ),
+      // NOTE: You still need to correctly configure your BottomNavBar.
+      // The error in your original post was for the 'Novel' class, but if your
+      // BottomNavBar also requires parameters, you'll need to provide them.
+      // For example:
+      // bottomNavigationBar: BottomNavBar(
+      //   items: [...],
+      //   currentIndex: _selectedIndex,
+      //   onTap: _onItemTapped,
+      // ),
     );
   }
 
+  // ... (Sisa kode tidak berubah)
   Widget _buildSearchResults() {
     return Column(
       children: [
@@ -110,11 +170,9 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
             controller: _tabController,
             children: [
               // All Tab
-              _buildNovelResults(),
-
+              _buildAllResults(),
               // Novels Tab
               _buildNovelResults(filterByNovel: true),
-
               // Authors Tab
               _buildAuthorResults(),
             ],
@@ -124,50 +182,12 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
     );
   }
 
-  Widget _buildNovelResults({bool filterByNovel = false}) {
-    final results = [
-      Novel(
-        id: '1',
-        title: "The Dragon's Legacy",
-        author: "Sarah Johnson",
-        rating: 4.9,
-        reviews: 2300,
-        genre: "Fantasy",
-        chapters: 32,
-        coverImage: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80',
-      ),
-      Novel(
-        id: '2',
-        title: "Midnight Shadows",
-        author: "James Wilson",
-        rating: 4.7,
-        reviews: 1800,
-        genre: "Mystery",
-        chapters: 28,
-        coverImage: 'https://images.unsplash.com/photo-1448375240586-882707db888b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80',
-      ),
-    ];
-
-    if (filterByNovel) {
-      results.add(
-        Novel(
-          id: '3',
-          title: "The Lost City",
-          author: "Emily Chen",
-          rating: 4.8,
-          reviews: 2100,
-          genre: "Adventure",
-          chapters: 30,
-          coverImage: 'https://images.unsplash.com/photo-1518709268805-4e9042af5929?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80',
-        ),
-      );
-    }
-
+  Widget _buildAllResults() {
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: results.length,
+      padding: ResponsiveHelper.getResponsivePadding(context),
+      itemCount: _searchResults.length,
       itemBuilder: (context, index) {
-        final novel = results[index];
+        final novel = _searchResults[index];
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
           child: InkWell(
@@ -185,7 +205,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4),
                     child: CachedNetworkImage(
-                      imageUrl: novel.coverImage,
+                      imageUrl: novel.coverImage ?? '',
                       width: 60,
                       height: 90,
                       fit: BoxFit.cover,
@@ -205,9 +225,9 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                       children: [
                         Text(
                           novel.title,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                            fontSize: ResponsiveHelper.getResponsiveFontSize(context, 16),
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -215,7 +235,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                           novel.author,
                           style: TextStyle(
                             color: Colors.grey[600],
-                            fontSize: 14,
+                            fontSize: ResponsiveHelper.getResponsiveFontSize(context, 14),
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -226,9 +246,95 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            novel.genre,
+                            novel.genreIds.join(', '), // Join genreIds for display
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: ResponsiveHelper.getResponsiveFontSize(context, 12),
+                              color: Colors.grey[800],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildNovelResults({bool filterByNovel = false}) {
+    final filteredResults = filterByNovel
+        ? _searchResults
+        : _searchResults; // No additional filtering for now
+    return ListView.builder(
+      padding: ResponsiveHelper.getResponsivePadding(context),
+      itemCount: filteredResults.length,
+      itemBuilder: (context, index) {
+        final novel = filteredResults[index];
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          child: InkWell(
+            onTap: () {
+              Navigator.pushNamed(
+                context,
+                '/novel-detail',
+                arguments: novel,
+              );
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: CachedNetworkImage(
+                      imageUrl: novel.coverImage ?? '',
+                      width: 60,
+                      height: 90,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
+                      errorWidget: (context, url, error) => Container(
+                        width: 60,
+                        height: 90,
+                        color: Colors.grey[300],
+                        child: const Center(child: Icon(Icons.error, color: Colors.red)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          novel.title,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: ResponsiveHelper.getResponsiveFontSize(context, 16),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          novel.author,
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: ResponsiveHelper.getResponsiveFontSize(context, 14),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[200],
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            novel.genreIds.join(', '), // Join genreIds for display
+                            style: TextStyle(
+                              fontSize: ResponsiveHelper.getResponsiveFontSize(context, 12),
                               color: Colors.grey[800],
                             ),
                           ),
@@ -246,25 +352,25 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
   }
 
   Widget _buildAuthorResults() {
-    final authors = [
-      {
-        'id': '1',
-        'name': 'Sarah Johnson',
-        'books': 12,
-        'genre': 'Fantasy',
-        'avatar': 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-      },
-      {
-        'id': '2',
-        'name': 'James Wilson',
-        'books': 8,
-        'genre': 'Mystery',
-        'avatar': 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-      },
-    ];
+    // Simulate authors based on search results (simplified mapping)
+    final authorMap = <String, Map<String, dynamic>>{};
+    for (var novel in _searchResults) {
+      if (!authorMap.containsKey(novel.author)) {
+        authorMap[novel.author] = {
+          'id': novel.id,
+          'name': novel.author,
+          'books': 1, // Increment based on novels
+          'genre': novel.genreIds.join(', '), // Join genreIds for display
+          'avatar': novel.coverImage,
+        };
+      } else {
+        authorMap[novel.author]!['books']++;
+      }
+    }
+    final authors = authorMap.values.toList();
 
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: ResponsiveHelper.getResponsivePadding(context),
       itemCount: authors.length,
       itemBuilder: (context, index) {
         final author = authors[index];
@@ -276,7 +382,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
               children: [
                 ClipOval(
                   child: CachedNetworkImage(
-                    imageUrl: author['avatar'] as String,
+                    imageUrl: author['avatar'] as String? ?? '',
                     width: 48,
                     height: 48,
                     fit: BoxFit.cover,
@@ -285,7 +391,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                       radius: 24,
                       backgroundColor: Colors.grey[300],
                       child: Text(
-                        author['name']!.toString()[0],
+                        author['name'].toString()[0],
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 18,
@@ -300,9 +406,9 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                   children: [
                     Text(
                       author['name'] as String,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                        fontSize: ResponsiveHelper.getResponsiveFontSize(context, 16),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -310,7 +416,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                       '${author['books']} books • ${author['genre']}',
                       style: TextStyle(
                         color: Colors.grey[600],
-                        fontSize: 14,
+                        fontSize: ResponsiveHelper.getResponsiveFontSize(context, 14),
                       ),
                     ),
                   ],
@@ -325,15 +431,15 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
 
   Widget _buildSearchSuggestions() {
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: ResponsiveHelper.getResponsivePadding(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Popular Searches
-          const Text(
+          Text(
             'Popular Searches',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: ResponsiveHelper.getResponsiveFontSize(context, 18),
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -363,7 +469,12 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                       border: Border.all(color: Colors.grey[300]!),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Text(tag),
+                    child: Text(
+                      tag,
+                      style: TextStyle(
+                        fontSize: ResponsiveHelper.getResponsiveFontSize(context, 14),
+                      ),
+                    ),
                   ),
                 )).toList(),
           ),
@@ -371,10 +482,10 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
           const SizedBox(height: 24),
 
           // Recent Searches
-          const Text(
+          Text(
             'Recent Searches',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: ResponsiveHelper.getResponsiveFontSize(context, 18),
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -388,7 +499,12 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
               'Mystery of the Ancient Temple'
             ].map((search) => ListTile(
                   leading: const Icon(Icons.search, color: Colors.grey),
-                  title: Text(search),
+                  title: Text(
+                    search,
+                    style: TextStyle(
+                      fontSize: ResponsiveHelper.getResponsiveFontSize(context, 14),
+                    ),
+                  ),
                   trailing: const Icon(Icons.close, color: Colors.grey),
                   onTap: () {
                     setState(() {

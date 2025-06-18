@@ -1,3 +1,4 @@
+// widgets/adaptive_widgets.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import '../utils/platform_detector.dart';
@@ -60,7 +61,7 @@ class AdaptiveAppBar extends StatelessWidget implements PreferredSizeWidget {
 // Adaptive Button
 class AdaptiveButton extends StatelessWidget {
   final String label;
-  final VoidCallback onPressed;
+  final void Function()? onPressed; // Changed to nullable
   final bool isPrimary;
   final bool isDestructive;
   final Widget? icon;
@@ -68,7 +69,7 @@ class AdaptiveButton extends StatelessWidget {
   const AdaptiveButton({
     Key? key,
     required this.label,
-    required this.onPressed,
+    required this.onPressed, // Still required, but can be null
     this.isPrimary = true,
     this.isDestructive = false,
     this.icon,
@@ -84,7 +85,7 @@ class AdaptiveButton extends StatelessWidget {
             : isPrimary
                 ? Theme.of(context).primaryColor
                 : null,
-        onPressed: onPressed,
+        onPressed: onPressed, // Handles null (disables button)
         child: icon != null
             ? Row(
                 mainAxisSize: MainAxisSize.min,
@@ -100,7 +101,7 @@ class AdaptiveButton extends StatelessWidget {
       if (isPrimary) {
         return icon != null
             ? ElevatedButton.icon(
-                onPressed: onPressed,
+                onPressed: onPressed, // Handles null (disables button)
                 icon: icon!,
                 label: Text(label),
                 style: isDestructive
@@ -111,7 +112,7 @@ class AdaptiveButton extends StatelessWidget {
                     : null,
               )
             : ElevatedButton(
-                onPressed: onPressed,
+                onPressed: onPressed, // Handles null (disables button)
                 style: isDestructive
                     ? ElevatedButton.styleFrom(
                         backgroundColor: Colors.red,
@@ -123,7 +124,7 @@ class AdaptiveButton extends StatelessWidget {
       } else {
         return icon != null
             ? OutlinedButton.icon(
-                onPressed: onPressed,
+                onPressed: onPressed, // Handles null (disables button)
                 icon: icon!,
                 label: Text(label),
                 style: isDestructive
@@ -133,7 +134,7 @@ class AdaptiveButton extends StatelessWidget {
                     : null,
               )
             : OutlinedButton(
-                onPressed: onPressed,
+                onPressed: onPressed, // Handles null (disables button)
                 style: isDestructive
                     ? OutlinedButton.styleFrom(
                         foregroundColor: Colors.red,
@@ -218,4 +219,3 @@ class AdaptiveScaffold extends StatelessWidget {
     }
   }
 }
-

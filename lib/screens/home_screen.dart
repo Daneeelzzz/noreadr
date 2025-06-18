@@ -3,15 +3,23 @@ import 'package:flutter/cupertino.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../widgets/bottom_nav_bar.dart';
 import '../models/novel.dart';
+import '../models/genre.dart'; // Ensure this is imported
 import '../utils/platform_detector.dart';
 import '../utils/responsive_helper.dart';
 import '../widgets/adaptive_widgets.dart';
 import 'package:pocketbase/pocketbase.dart';
 import '../services/pocketbase_service.dart';
+import 'novel_list_screen.dart';
+import 'genre_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
 
+  @override
+  _HomeScreenState createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final isLandscape = ResponsiveHelper.isLandscape(context);
@@ -43,7 +51,7 @@ class HomeScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildBannerPromo(context),
-          _buildCategories(context),
+          _buildGenres(context),
           _buildPopularNovels(context),
           _buildContinueReading(context),
           _buildNewReleases(context),
@@ -75,7 +83,7 @@ class HomeScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildCategories(context),
+                _buildGenres(context),
                 _buildPopularNovels(context),
                 _buildNewReleases(context),
                 const SizedBox(height: 20),
@@ -95,14 +103,16 @@ class HomeScreen extends StatelessWidget {
       desktop: 250.0,
     );
 
-    return FutureBuilder<List<RecordModel>>(
-      future: PocketBaseService.fetchNovels(),
+    return FutureBuilder<List<Novel>>(
+      future: PocketBaseService.fetchNovels(sort: '-created'),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError || !snapshot.hasData) {
-          print('Error fetching novels: ${snapshot.error}');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Gagal memuat novel trending: ${snapshot.error}')),
+          );
           return Container(height: height, color: Colors.grey[300]);
         }
         final novels = snapshot.data!;
@@ -119,7 +129,7 @@ class HomeScreen extends StatelessWidget {
               alignment: Alignment.bottomLeft,
               children: [
                 CachedNetworkImage(
-                  imageUrl: PocketBaseService.getNovelCoverImage(trendingNovel),
+                  imageUrl: trendingNovel.coverImage ?? '',
                   fit: BoxFit.cover,
                   width: double.infinity,
                   height: height,
@@ -137,10 +147,7 @@ class HomeScreen extends StatelessWidget {
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        Colors.black.withOpacity(0.7),
-                      ],
+                      colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
                     ),
                   ),
                 ),
@@ -166,7 +173,7 @@ class HomeScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        trendingNovel.data['title'] ?? 'No Title',
+                        trendingNovel.title,
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: ResponsiveHelper.getResponsiveFontSize(context, 20),
@@ -179,7 +186,7 @@ class HomeScreen extends StatelessWidget {
                           const Icon(Icons.star, color: Colors.amber, size: 16),
                           const SizedBox(width: 4),
                           Text(
-                            '${trendingNovel.data['rating'] ?? '0.0'} (${trendingNovel.data['reviews'] ?? '0'} readers)',
+                            '${trendingNovel.rating} (${trendingNovel.reviews} readers)',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: ResponsiveHelper.getResponsiveFontSize(context, 12),
@@ -191,20 +198,7 @@ class HomeScreen extends StatelessWidget {
                       AdaptiveButton(
                         label: 'Read Now',
                         onPressed: () {
-                          Navigator.pushNamed(
-                            context,
-                            '/novel-detail',
-                            arguments: Novel(
-                              id: trendingNovel.id,
-                              title: trendingNovel.data['title'] ?? 'No Title',
-                              author: trendingNovel.data['author'] ?? 'Unknown',
-                              rating: double.tryParse(trendingNovel.data['rating']?.toString() ?? '0.0') ?? 0.0,
-                              reviews: int.tryParse(trendingNovel.data['reviews']?.toString() ?? '0') ?? 0,
-                              genre: trendingNovel.data['genre'] ?? 'Unknown',
-                              chapters: int.tryParse(trendingNovel.data['chapters']?.toString() ?? '0') ?? 0,
-                              coverImage: PocketBaseService.getNovelCoverImage(trendingNovel),
-                            ),
-                          );
+                          Navigator.pushNamed(context, '/novel-detail', arguments: trendingNovel.id);
                         },
                       ),
                     ],
@@ -218,12 +212,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildCategories(BuildContext context) {
-    final categories = [
-      'Fiction', 'Romance', 'Wuxia', 'Sci-Fi',
-      'Xiaxia', 'Action', 'Mystery', 'Adventure',
-    ];
-
+  Widget _buildGenres(BuildContext context) {
     return Padding(
       padding: ResponsiveHelper.getResponsivePadding(context),
       child: Column(
@@ -233,39 +222,65 @@ class HomeScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Categories',
+                'Genres',
                 style: TextStyle(
                   fontSize: ResponsiveHelper.getResponsiveFontSize(context, 18),
                   fontWeight: FontWeight.bold,
                 ),
               ),
               TextButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.pushNamed(context, '/novel-list', arguments: {'title': 'All Genres'});
+                },
                 child: const Text('See All'),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          SizedBox(
-            height: 40,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: categories.length,
-              itemBuilder: (context, index) {
-                return Container(
-                  margin: const EdgeInsets.only(right: 8),
-                  child: Chip(
-                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                    label: Text(
-                      categories[index],
-                      style: TextStyle(
-                        fontSize: ResponsiveHelper.getResponsiveFontSize(context, 14),
-                      ),
-                    ),
-                  ),
+          FutureBuilder<List<Genre>>(
+            future: PocketBaseService.fetchGenres(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError || !snapshot.hasData) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Gagal memuat genre: ${snapshot.error}')),
                 );
-              },
-            ),
+                return const SizedBox.shrink();
+              }
+              final genres = snapshot.data!;
+              return SizedBox(
+                height: 40,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: genres.length,
+                  itemBuilder: (context, index) {
+                    final genre = genres[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.pushNamed(context, '/genre', arguments: {
+                            'genreId': genre.id,
+                            'genreName': genre.name,
+                          });
+                        },
+                        child: Chip(
+                          backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                          label: Text(
+                            genre.name,
+                            style: TextStyle(
+                              fontSize: ResponsiveHelper.getResponsiveFontSize(context, 14),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -280,14 +295,16 @@ class HomeScreen extends StatelessWidget {
       desktop: 4,
     );
 
-    return FutureBuilder<List<RecordModel>>(
-      future: PocketBaseService.fetchNovels(),
+    return FutureBuilder<List<Novel>>(
+      future: PocketBaseService.fetchNovels(filter: 'rating>=4', sort: '-rating'),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError || !snapshot.hasData) {
-          print('Error fetching novels: ${snapshot.error}');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Gagal memuat novel populer: ${snapshot.error}')),
+          );
           return const Center(child: Text('Gagal memuat data novel'));
         }
         final novels = snapshot.data!;
@@ -308,7 +325,13 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                   TextButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/novel-list', arguments: {
+                        'title': 'Popular Now',
+                        'filter': 'rating>=4',
+                        'sort': '-rating',
+                      });
+                    },
                     child: const Text('See All'),
                   ),
                 ],
@@ -328,20 +351,7 @@ class HomeScreen extends StatelessWidget {
                   final novel = novels[index];
                   return GestureDetector(
                     onTap: () {
-                      Navigator.pushNamed(
-                        context,
-                        '/novel-detail',
-                        arguments: Novel(
-                          id: novel.id,
-                          title: novel.data['title'] ?? 'No Title',
-                          author: novel.data['author'] ?? 'Unknown',
-                          rating: double.tryParse(novel.data['rating']?.toString() ?? '0.0') ?? 0.0,
-                          reviews: int.tryParse(novel.data['reviews']?.toString() ?? '0') ?? 0,
-                          genre: novel.data['genre'] ?? 'Unknown',
-                          chapters: int.tryParse(novel.data['chapters']?.toString() ?? '0') ?? 0,
-                          coverImage: PocketBaseService.getNovelCoverImage(novel),
-                        ),
-                      );
+                      Navigator.pushNamed(context, '/novel-detail', arguments: novel.id);
                     },
                     child: Card(
                       elevation: 2,
@@ -354,7 +364,7 @@ class HomeScreen extends StatelessWidget {
                           Stack(
                             children: [
                               CachedNetworkImage(
-                                imageUrl: PocketBaseService.getNovelCoverImage(novel),
+                                imageUrl: novel.coverImage ?? '',
                                 fit: BoxFit.cover,
                                 height: 140,
                                 width: double.infinity,
@@ -370,19 +380,14 @@ class HomeScreen extends StatelessWidget {
                                 right: 8,
                                 child: IconButton(
                                   icon: Icon(
-                                    (novel.data['is_bookmarked'] ?? false)
-                                        ? PlatformDetector.isIOS()
-                                            ? CupertinoIcons.heart_fill
-                                            : Icons.favorite
-                                        : PlatformDetector.isIOS()
-                                            ? CupertinoIcons.heart
-                                            : Icons.favorite_border,
+                                    Icons.favorite_border,
                                     size: 16,
-                                    color: (novel.data['is_bookmarked'] ?? false) ? Colors.red : Colors.grey,
+                                    color: Colors.grey,
                                   ),
                                   onPressed: () async {
                                     try {
                                       await PocketBaseService.addBookmark(novel.id);
+                                      setState(() {}); // Refresh UI
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         const SnackBar(content: Text('Novel ditambahkan ke bookmark')),
                                       );
@@ -403,7 +408,7 @@ class HomeScreen extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    novel.data['title'] ?? 'No Title',
+                                    novel.title,
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: ResponsiveHelper.getResponsiveFontSize(context, 14),
@@ -413,7 +418,7 @@ class HomeScreen extends StatelessWidget {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    novel.data['author'] ?? 'Unknown',
+                                    novel.author,
                                     style: TextStyle(
                                       color: Colors.grey[600],
                                       fontSize: ResponsiveHelper.getResponsiveFontSize(context, 12),
@@ -424,29 +429,20 @@ class HomeScreen extends StatelessWidget {
                                   const SizedBox(height: 4),
                                   Row(
                                     children: [
-                                      Icon(
-                                        PlatformDetector.isIOS()
-                                            ? CupertinoIcons.star_fill
-                                            : Icons.star,
-                                        color: Colors.amber,
-                                        size: 14,
-                                      ),
+                                      const Icon(Icons.star, color: Colors.amber, size: 14),
                                       const SizedBox(width: 4),
                                       Text(
-                                        (novel.data['rating']?.toString() ?? '0.0'),
+                                        novel.rating.toString(),
                                         style: TextStyle(
                                           fontSize: ResponsiveHelper.getResponsiveFontSize(context, 12),
                                         ),
                                       ),
                                       const SizedBox(width: 4),
-                                      Flexible(
-                                        child: Text(
-                                          '(${novel.data['reviews'] != null ? (int.parse(novel.data['reviews'].toString()) / 1000).toStringAsFixed(1) : '0'}k)',
-                                          style: TextStyle(
-                                            color: Colors.grey[600],
-                                            fontSize: ResponsiveHelper.getResponsiveFontSize(context, 12),
-                                          ),
-                                          overflow: TextOverflow.ellipsis,
+                                      Text(
+                                        '(${novel.reviews / 1000}k)',
+                                        style: TextStyle(
+                                          color: Colors.grey[600],
+                                          fontSize: ResponsiveHelper.getResponsiveFontSize(context, 12),
                                         ),
                                       ),
                                     ],
@@ -476,7 +472,6 @@ class HomeScreen extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
-          print('Error fetching bookmarks: ${snapshot.error}');
           return const Padding(
             padding: EdgeInsets.all(16.0),
             child: Text('Belum ada yang dibaca'),
@@ -489,14 +484,16 @@ class HomeScreen extends StatelessWidget {
         final totalChapters = int.tryParse(bookmark.data['total_chapters']?.toString() ?? '0') ?? 0;
         final progress = totalChapters > 0 ? (chapterNumber / totalChapters).clamp(0.0, 1.0) : 0.0;
 
-        return FutureBuilder<RecordModel>(
+        return FutureBuilder<Novel>(
           future: PocketBaseService.fetchNovel(novelId),
           builder: (context, novelSnapshot) {
             if (novelSnapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
             }
             if (novelSnapshot.hasError || !novelSnapshot.hasData) {
-              print('Error fetching novel: ${novelSnapshot.error}');
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Gagal memuat novel: ${novelSnapshot.error}')),
+              );
               return const Padding(
                 padding: EdgeInsets.all(16.0),
                 child: Text('Data novel tidak ditemukan'),
@@ -520,7 +517,12 @@ class HomeScreen extends StatelessWidget {
                         ),
                       ),
                       TextButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/novel-list', arguments: {
+                            'title': 'Continue Reading',
+                            'filter': 'id~"$novelId"',
+                          });
+                        },
                         child: const Text('See All'),
                       ),
                     ],
@@ -536,7 +538,7 @@ class HomeScreen extends StatelessWidget {
                       child: Row(
                         children: [
                           CachedNetworkImage(
-                            imageUrl: PocketBaseService.getNovelCoverImage(novel),
+                            imageUrl: novel.coverImage ?? '',
                             fit: BoxFit.cover,
                             width: 60,
                             height: 90,
@@ -554,7 +556,7 @@ class HomeScreen extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  novel.data['title'] ?? 'No Title',
+                                  novel.title,
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: ResponsiveHelper.getResponsiveFontSize(context, 16),
@@ -591,17 +593,19 @@ class HomeScreen extends StatelessWidget {
                                     ),
                                     AdaptiveButton(
                                       label: 'Continue',
-                                      onPressed: chapterNumber > 0 ? () {
-                                        Navigator.pushNamed(
-                                          context,
-                                          '/reader',
-                                          arguments: {
-                                            'novelId': novelId,
-                                            'chapterId': chapterNumber.toString(),
-                                            'title': novel.data['title'],
-                                          },
-                                        );
-                                      } : () {}, // Fungsi kosong jika chapterNumber <= 0
+                                      onPressed: chapterNumber > 0
+                                          ? () {
+                                              Navigator.pushNamed(
+                                                context,
+                                                '/reader',
+                                                arguments: {
+                                                  'novelId': novelId,
+                                                  'chapterId': chapterNumber.toString(),
+                                                  'title': novel.title,
+                                                },
+                                              );
+                                            }
+                                          : null,
                                     ),
                                   ],
                                 ),
@@ -629,14 +633,16 @@ class HomeScreen extends StatelessWidget {
       desktop: 260.0,
     );
 
-    return FutureBuilder<List<RecordModel>>(
-      future: PocketBaseService.fetchNovels(),
+    return FutureBuilder<List<Novel>>(
+      future: PocketBaseService.fetchNovels(sort: '-created'),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError || !snapshot.hasData) {
-          print('Error fetching novels: ${snapshot.error}');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Gagal memuat novel baru: ${snapshot.error}')),
+          );
           return const Center(child: Text('Gagal memuat data novel'));
         }
         final novels = snapshot.data!;
@@ -657,7 +663,12 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                   TextButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/novel-list', arguments: {
+                        'title': 'New Releases',
+                        'sort': '-created',
+                      });
+                    },
                     child: const Text('See All'),
                   ),
                 ],
@@ -672,20 +683,7 @@ class HomeScreen extends StatelessWidget {
                     final novel = novels[index];
                     return GestureDetector(
                       onTap: () {
-                        Navigator.pushNamed(
-                          context,
-                          '/novel-detail',
-                          arguments: Novel(
-                            id: novel.id,
-                            title: novel.data['title'] ?? 'No Title',
-                            author: novel.data['author'] ?? 'Unknown',
-                            rating: double.tryParse(novel.data['rating']?.toString() ?? '0.0') ?? 0.0,
-                            reviews: int.tryParse(novel.data['reviews']?.toString() ?? '0') ?? 0,
-                            genre: novel.data['genre'] ?? 'Unknown',
-                            chapters: int.tryParse(novel.data['chapters']?.toString() ?? '0') ?? 0,
-                            coverImage: PocketBaseService.getNovelCoverImage(novel),
-                          ),
-                        );
+                        Navigator.pushNamed(context, '/novel-detail', arguments: novel.id);
                       },
                       child: Container(
                         width: 120,
@@ -698,14 +696,14 @@ class HomeScreen extends StatelessWidget {
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(8),
                                 image: DecorationImage(
-                                  image: NetworkImage(PocketBaseService.getNovelCoverImage(novel)),
+                                  image: NetworkImage(novel.coverImage ?? ''),
                                   fit: BoxFit.cover,
                                 ),
                               ),
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              novel.data['title'] ?? 'No Title',
+                              novel.title,
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: ResponsiveHelper.getResponsiveFontSize(context, 14),
@@ -715,7 +713,7 @@ class HomeScreen extends StatelessWidget {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              novel.data['author'] ?? 'Unknown',
+                              novel.author,
                               style: TextStyle(
                                 color: Colors.grey[600],
                                 fontSize: ResponsiveHelper.getResponsiveFontSize(context, 12),

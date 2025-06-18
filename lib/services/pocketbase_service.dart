@@ -1,7 +1,9 @@
 import 'package:pocketbase/pocketbase.dart';
+import '../models/novel.dart'; // Assuming you have this model
+import '../models/genre.dart'; // Assuming you have this model
 
 class PocketBaseService {
-  static final pb = PocketBase('http://127.0.0.1:8090'); // Ganti dengan URL produksi jika perlu
+  static final pb = PocketBase('http://127.0.0.1:8090'); // Update URL if hosted
 
   // Login pengguna
   static Future<void> login(String email, String password) async {
@@ -60,14 +62,16 @@ class PocketBaseService {
         : '';
   }
 
-  // Mendapatkan daftar novel
-  static Future<List<RecordModel>> fetchNovels() async {
+  // Mendapatkan daftar novel dengan filter dan sort opsional
+  static Future<List<Novel>> fetchNovels({String? filter, String? sort}) async {
     try {
       final result = await pb.collection('novels').getFullList(
-        sort: '-created',
-        headers: {'Authorization': 'Bearer ${pb.authStore.token}'}, // Pastikan token dikirim
+        filter: filter,
+        sort: sort,
+        expand: 'genres', // Expand to include genre details
+        headers: {'Authorization': 'Bearer ${pb.authStore.token}'},
       );
-      return result;
+      return result.map((record) => Novel.fromJson(record.toJson())).toList();
     } catch (e) {
       print('Error fetching novels: $e');
       rethrow;
@@ -75,13 +79,14 @@ class PocketBaseService {
   }
 
   // Mendapatkan detail novel berdasarkan ID
-  static Future<RecordModel> fetchNovel(String id) async {
+  static Future<Novel> fetchNovel(String id) async {
     try {
       final result = await pb.collection('novels').getOne(
         id,
-        headers: {'Authorization': 'Bearer ${pb.authStore.token}'}, // Pastikan token dikirim
+        expand: 'genres', // Expand to include genre details
+        headers: {'Authorization': 'Bearer ${pb.authStore.token}'},
       );
-      return result;
+      return Novel.fromJson(result.toJson());
     } catch (e) {
       print('Error fetching novel: $e');
       rethrow;
@@ -94,7 +99,7 @@ class PocketBaseService {
       final result = await pb.collection('chapters').getFullList(
         filter: 'novel_id = "$novelId"',
         sort: 'chapter_number',
-        headers: {'Authorization': 'Bearer ${pb.authStore.token}'}, // Pastikan token dikirim
+        headers: {'Authorization': 'Bearer ${pb.authStore.token}'},
       );
       return result;
     } catch (e) {
@@ -116,7 +121,7 @@ class PocketBaseService {
         filter: 'user_id = "$userId"',
         sort: '-created',
         expand: 'novel_id',
-        headers: {'Authorization': 'Bearer ${pb.authStore.token}'}, // Pastikan token dikirim
+        headers: {'Authorization': 'Bearer ${pb.authStore.token}'},
       );
       return result;
     } catch (e) {
@@ -132,7 +137,7 @@ class PocketBaseService {
         : '';
   }
 
-  // Menambahkan bookmark (contoh fungsi tambahan)
+  // Menambahkan bookmark
   static Future<void> addBookmark(String novelId) async {
     if (!pb.authStore.isValid || pb.authStore.model == null) {
       throw Exception("User belum login");
@@ -146,11 +151,54 @@ class PocketBaseService {
           'user_id': userId,
           'novel_id': novelId,
         },
-        headers: {'Authorization': 'Bearer ${pb.authStore.token}'}, // Pastikan token dikirim
+        headers: {'Authorization': 'Bearer ${pb.authStore.token}'},
       );
       print("Bookmark ditambahkan");
     } catch (e) {
       print('Error adding bookmark: $e');
+      rethrow;
+    }
+  }
+
+  // Mendapatkan daftar genre
+  static Future<List<Genre>> fetchGenres() async {
+    try {
+      final result = await pb.collection('genres').getFullList(
+        headers: {'Authorization': 'Bearer ${pb.authStore.token}'},
+      );
+      return result.map((record) => Genre.fromJson(record.toJson())).toList();
+    } catch (e) {
+      print('Error fetching genres: $e');
+      rethrow;
+    }
+  }
+
+  // Mendapatkan novel berdasarkan genre ID (untuk relation multiple)
+  static Future<List<Novel>> fetchNovelsByGenre(String genreId) async {
+    try {
+      final result = await pb.collection('novels').getFullList(
+        filter: 'genres~"$genreId"', // ~ operator for contains in relation (multiple)
+        expand: 'genres',
+        headers: {'Authorization': 'Bearer ${pb.authStore.token}'},
+      );
+      return result.map((record) => Novel.fromJson(record.toJson())).toList();
+    } catch (e) {
+      print('Error fetching novels by genre: $e');
+      rethrow;
+    }
+  }
+
+  // Pencarian novel
+  static Future<List<Novel>> searchNovels(String query) async {
+    try {
+      final result = await pb.collection('novels').getFullList(
+        filter: 'title~"$query" || author~"$query"',
+        expand: 'genres',
+        headers: {'Authorization': 'Bearer ${pb.authStore.token}'},
+      );
+      return result.map((record) => Novel.fromJson(record.toJson())).toList();
+    } catch (e) {
+      print('Error searching novels: $e');
       rethrow;
     }
   }
